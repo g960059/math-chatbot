@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --sidebar-bg: #f5f5f5;
+  --border-color: #e5e5e5;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --user-message-bg: #2563eb;
+  --assistant-message-bg: #f5f5f5;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --sidebar-bg: #171717;
+  --border-color: #262626;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --user-message-bg: #1d4ed8;
+  --assistant-message-bg: #1f1f1f;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  overflow: hidden;
+  overscroll-behavior-y: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #404040;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
+
+/* KaTeX styling */
+.katex {
+  font-size: 1.1em;
+}
+
+.katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Message content styling */
+.message-content {
+  line-height: 1.7;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.message-content p {
+  margin-bottom: 1em;
+}
+
+.message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.message-content pre {
+  background: var(--sidebar-bg);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1em 0;
+  max-width: 100%;
+}
+
+.message-content code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875em;
+}
+
+.message-content :not(pre) > code {
+  background: var(--sidebar-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+}
+
+/* Lists styling */
+.message-content ul,
+.message-content ol {
+  margin: 1em 0;
+  padding-left: 1.5em;
+}
+
+.message-content li {
+  margin-bottom: 0.5em;
+}
+
+.message-content ul {
+  list-style-type: disc;
+}
+
+.message-content ol {
+  list-style-type: decimal;
+}
+
+/* Headings */
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4 {
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.message-content h1 {
+  font-size: 1.5em;
+}
+
+.message-content h2 {
+  font-size: 1.25em;
+}
+
+.message-content h3 {
+  font-size: 1.125em;
+}
+
+/* Blockquote */
+.message-content blockquote {
+  border-left: 3px solid var(--border-color);
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--foreground);
+  opacity: 0.8;
+}
+
+/* Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
