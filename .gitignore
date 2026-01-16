@@ -18,6 +18,8 @@ coverage
 .env.development.local
 .env.test.local
 .env.production.local
+env.yaml
+cloudbuild.yaml
 
 # Debug
 npm-debug.log*

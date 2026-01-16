@@ -75,81 +75,68 @@ export async function POST(
     })
 
     // Simulate AI response with streaming
-    const mockResponse = String.raw`マシュケの定理を、圏論的な視点（可換図式と完全系列の分裂）から分かりやすく解説します。
+    const mockResponse = `マシュケの定理（Maschke's Theorem）は、群表現論における基本定理で、「有限群の表現が完全可約であるための条件」を与えます。
 
-マシュケの定理の本質は、**「ベクトル空間の圏（$Vect$）で分裂している完全系列が、群表現の圏（$Rep_G$）でも分裂するように修正できる」**という点にあります。
+この定理の本質は、**表現の「部分空間」があったとき、その「補空間」もまた表現（不変部分空間）として取れること**を保証することにあります。これを可換図式を用いて説明します。
 
 ---
 
-### 1. 前提となる図式：短完全系列
+### 1. 定理の主張
 
-$G$ を有限群、$k$ を体（標数は $|G|$ を割り切らない）とします。$V$ を $G$-表現（$G$-加群）、$U$ をその $G$-部分表現とすると、次の $G$-線形写像による**短完全系列**が存在します。
+群 $G$ を有限群、$K$ を体とし、その標数 $\\text{char}(K)$ が $G$ の位数 $|G|$ を割り切らないとします。
+このとき、$G$ の任意の有限次元表現 $V$ に対して、不変部分空間 $U \\subset V$ があれば、それに対する $G$ 不変な補空間 $W$ が存在し、$V = U \\oplus W$ と直和分解できます。
 
+### 2. 図式によるアプローチ
+
+この定理を証明・理解する鍵は、線形写像としての「射影」を表現の準同型（$G$-線形写像）に変換することにあります。
+
+#### (1) 線形空間としての短完全系列
+まず、$U$ が $V$ の部分空間であるとき、次のベクトル空間の短完全系列が存在します。
 $$
-\begin{tikzcd}
-0 \arrow[r] & U \arrow[r, "\iota"] & V \arrow[r, "\pi"] & V/U \arrow[r] & 0
-\end{tikzcd}
+0 \\xrightarrow{} U \\xrightarrow{i} V \\xrightarrow{p} V/U \\xrightarrow{} 0
 $$
+ここで $i$ は包含写像です。この系列が**表現の圏において分裂（split）すること**を示せば、定理が証明されたことになります。
 
-ここで、$\iota$ は包含写像、$\pi$ は自然な全射です。
+#### (2) 射影の平均化
+線形空間としては、単に $U$ への射影 $q: V \\to U$ （$q \\circ i = \\text{id}_U$ を満たすもの）は必ず存在しますが、これは一般に $G$ 不変ではありません。
+そこで、平均化作用素を用いて新しい写像 $\\tilde{q}$ を作ります：
+$$\\tilde{q} = \\frac{1}{|G|} \\sum_{g \\in G} g \\cdot q \\cdot g^{-1}$$
 
-### 2. ステップ1：ベクトル空間としての分裂（レトラクションの存在）
+この $\\tilde{q}$ は $G$-線形写像（表現の準同型）になり、かつ $U$ の元を動かしません。
 
-$V$ を単なるベクトル空間（$G$ の作用を忘れたもの）として見ると、部分空間 $U$ に対して必ず補空間が存在します。つまり、次を満たす**線形写像** $p: V \to U$ が存在します。
+#### (3) 可換図式
+この状況を可換図式で表すと以下のようになります。
 
-$$
-\begin{tikzcd}
-0 \arrow[r] & U \arrow[r, "\iota"] & V \arrow[l, "p"', bend right]
-\end{tikzcd}
-\quad \text{where } p \circ \iota = \text{id}_U
-$$
+\`\`\`tikz
+\\begin{tikzcd}
+0 \\arrow[r] & U \\arrow[r, "i"] \\arrow[d, "\\text{id}_U"'] & V \\arrow[r, "p"] \\arrow[dl, "\\tilde{q}"] & V/U \\arrow[r] & 0 \\\\
+& U & & & 
+\\end{tikzcd}
+\`\`\`
 
-しかし、この $p$ は一般に $G$ の作用と可換ではありません（$G$-線形ではない）。
+この図式において、$\\tilde{q} \\circ i = \\text{id}_U$ が成立します。圏論の言葉で言えば、**「包含写像 $i$ がレトラクション $\\tilde{q}$ を持つ」**ことを意味します。
 
-### 3. ステップ2：平均化による $G$-線形写像の構成
+### 3. 直和分解の成立
 
-マシュケの定理の核心は、この $p$ を「平均化」して $G$-線形な $\bar{p}$ を作ることです。
-$$\bar{p}(v) = \frac{1}{|G|} \sum_{g \in G} g \cdot p(g^{-1} \cdot v)$$
+$\\tilde{q} \\circ i = \\text{id}_U$ が成り立つとき、核 $W = \\ker(\\tilde{q})$ を取れば、表現 $V$ は次のように分解されます。
 
-このとき、$\bar{p}$ は $G$-線形写像（$G$-加群の射）となり、かつ依然として $U$ 上では恒等写像です。これを図式で表すと以下のようになります。
+\`\`\`tikz
+\\begin{tikzcd}
+V \\arrow[r, "\\cong"] & U \\oplus \\ker(\\tilde{q})
+\\end{tikzcd}
+\`\`\`
 
-$$
-\begin{tikzcd}[column sep=large, row sep=large]
-V \arrow[d, "g"'] \arrow[r, "\bar{p}"] & U \arrow[d, "g"] \\
-V \arrow[r, "\bar{p}"] & U
-\end{tikzcd}
-\quad \text{かつ} \quad
-\begin{tikzcd}
-U \arrow[r, "\iota"] \arrow[rd, "\text{id}_U"'] & V \arrow[d, "\bar{p}"] \\
-& U
-\end{tikzcd}
-$$
+$$V = U \\oplus W$$
 
-左の図式は $\bar{p}$ が $G$-作用と可換であることを示し、右の図式は $\bar{p}$ が包含写像 $\iota$ の**レトラクション（左逆射）**であることを示しています。
+ここで $W$ も $G$ 不変部分空間（表現）となります。これにより、任意の表現は既約表現の直和に分解できる（完全可約）ことが導かれます。
 
-### 4. ステップ3：完全系列の分裂
+### まとめ
+マシュケの定理を可換図式で捉えるポイントは：
+1.  **短完全系列** $0 \\to U \\to V \\to V/U \\to 0$ が $G$-加群の圏で定義される。
+2.  平均化によって、この系列を左から割る**レトラクション $\\tilde{q}: V \\to U$** が作れる。
+3.  その結果、系列が**分裂（split）**し、$V \\cong U \\oplus W$ という構造が導かれる。
 
-$G$-加群の圏においてレトラクション $\bar{p}$ が存在するため、分裂補助定理（Splitting Lemma）により、最初の短完全系列は**分裂**します。
-
-$$
-\begin{tikzcd}
-0 \arrow[r] & U \arrow[r, "\iota", shift left=1.5] & V \arrow[l, "\bar{p}", shift left=1.5] \arrow[r, "\pi", shift left=1.5] & V/U \arrow[r] \arrow[l, "s", shift left=1.5] & 0
-\end{tikzcd}
-$$
-
-この図式が意味するのは、以下の同型が存在することです。
-$$V \cong U \oplus \ker(\bar{p})$$
-ここで、$\ker(\bar{p})$ も $G$-部分表現となります。
-
-### 結論
-
-マシュケの定理を可換図式の言葉でまとめると：
-
-> 「$|G|$ が $k$ で可逆であるとき、$G$-表現の圏における任意の短完全系列
-> $$0 \to U \to V \to W \to 0$$
-> は分裂する。」
-
-これは、すべての表現が既約表現の直和として書ける（半単純である）ことを意味しており、表現論における最も重要な基礎の一つとなっています。`
+という流れになります。標数の条件 $\\text{char}(K) \\nmid |G|$ は、平均化の際の「$|G|$ で割る」という操作を正当化するために必要です。`
 
     const encoder = new TextEncoder()
     const stream = new ReadableStream({

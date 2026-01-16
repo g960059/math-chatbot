@@ -1,9 +1,9 @@
 'use client'
-'use client'
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
+import remarkGfm from 'remark-gfm'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import { cn } from '@/lib/utils'
@@ -131,32 +131,88 @@ function TikzBlock({ content }: { content: string }) {
 
 function MessageContentComponent({ content, isStreaming }: MessageContentProps) {
   const segments = useMemo(() => {
-    if (!content.includes('\\begin{tikz')) {
+    // Check for tikz content in either format:
+    // 1. Direct LaTeX: \begin{tikzcd} or \begin{tikzpicture}
+    // 2. Markdown code block: ```tikz
+    const hasTikz = content.includes('\\begin{tikz') || /```tikz\s*\n/i.test(content)
+    
+    if (!hasTikz) {
       return [{ type: 'markdown', content }]
     }
 
-    const tikzEnvRegex = /\\begin\{tikz(?:cd|picture)\}[\s\S]*?\\end\{tikz(?:cd|picture)\}/g
     const collected: Array<{ type: 'markdown' | 'tikz'; content: string }> = []
-    let lastIndex = 0
-
+    
+    // Pattern for markdown code blocks with tikz
+    // Matches: ```tikz\n...\n``` (with optional content inside)
+    const tikzCodeBlockRegex = /```tikz\s*\n([\s\S]*?)```/gi
+    
+    // Pattern for direct LaTeX tikz environments
+    const tikzEnvRegex = /\\begin\{tikz(?:cd|picture)\}[\s\S]*?\\end\{tikz(?:cd|picture)\}/g
+    
+    // Combine both patterns: find all tikz blocks
+    const allMatches: Array<{ index: number; length: number; content: string; isCodeBlock: boolean }> = []
+    
+    // Find markdown code block matches
+    for (const match of content.matchAll(tikzCodeBlockRegex)) {
+      const index = match.index ?? 0
+      allMatches.push({
+        index,
+        length: match[0].length,
+        content: match[1], // The captured group (content inside code block)
+        isCodeBlock: true,
+      })
+    }
+    
+    // Find direct LaTeX matches (only if not already inside a code block)
     for (const match of content.matchAll(tikzEnvRegex)) {
       const index = match.index ?? 0
-      let before = content.slice(lastIndex, index)
+      // Check if this match is inside a code block
+      const isInsideCodeBlock = allMatches.some(
+        m => m.isCodeBlock && index >= m.index && index < m.index + m.length
+      )
+      if (!isInsideCodeBlock) {
+        allMatches.push({
+          index,
+          length: match[0].length,
+          content: match[0],
+          isCodeBlock: false,
+        })
+      }
+    }
+    
+    // Sort by index
+    allMatches.sort((a, b) => a.index - b.index)
+    
+    if (allMatches.length === 0) {
+      return [{ type: 'markdown', content }]
+    }
+    
+    let lastIndex = 0
+    
+    for (const match of allMatches) {
+      // Add markdown before this tikz block
+      let before = content.slice(lastIndex, match.index)
+      // Clean up any trailing $$ or \[ that might wrap the tikz
       before = before.replace(/\$\$\s*$/, '').replace(/\\\[\s*$/, '')
       if (before.trim()) {
         collected.push({ type: 'markdown', content: before })
       }
 
-      collected.push({ type: 'tikz', content: match[0] })
-      lastIndex = index + match[0].length
+      // Add the tikz block
+      collected.push({ type: 'tikz', content: match.content })
+      lastIndex = match.index + match.length
 
+      // Skip any leading $$ or \] after the tikz block (but not if it's part of a math expression)
+      // Only skip standalone $$ or \] that were used to wrap the tikz block
       const afterSlice = content.slice(lastIndex)
-      const leadingMatch = afterSlice.match(/^\s*(\$\$|\\\])/)
+      // Match only standalone $$ or \] at the start (not followed by content on the same line)
+      const leadingMatch = afterSlice.match(/^(\s*\n)?\s*(\$\$|\\\])(?=\s*\n|$)/)
       if (leadingMatch) {
         lastIndex += leadingMatch[0].length
       }
     }
 
+    // Add remaining content after last tikz block
     const tail = content.slice(lastIndex)
     if (tail.trim()) {
       collected.push({ type: 'markdown', content: tail })
@@ -199,7 +255,7 @@ function MessageContentComponent({ content, isStreaming }: MessageContentProps) 
         ) : (
           <ReactMarkdown
             key={`md-${index}`}
-            remarkPlugins={[remarkMath]}
+            remarkPlugins={[remarkGfm, remarkMath]}
             rehypePlugins={[rehypeKatex, rehypeRaw]}
             components={{
               code({ className, children, ...props }) {
