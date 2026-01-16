@@ -165,6 +165,79 @@ API側でもモックユーザーを使用。
 gcloud builds submit --config cloudbuild.yaml --project math-chatbot-484411
 ```
 
+### GitHub Actions 自動デプロイ
+
+`main` ブランチへのプッシュで自動デプロイが走ります。
+
+#### 必要な GitHub Secrets
+
+設定画面: `Settings > Secrets and variables > Actions`
+
+| Secret名 | 説明 |
+|----------|------|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | Workload Identity Provider のリソース名 |
+| `GCP_SERVICE_ACCOUNT` | サービスアカウントのメールアドレス |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Anon Key |
+
+#### Workload Identity Federation 設定手順（初回のみ）
+
+ローカル環境で `gcloud` コマンドを使用して設定します。
+
+```bash
+# 変数設定
+export PROJECT_ID="math-chatbot-484411"
+export SERVICE_ACCOUNT="github-actions-deployer"
+export POOL_NAME="github-actions-pool"
+export PROVIDER_NAME="github-actions-provider"
+export REPO="g960059/math-chatbot" # ユーザー名/リポジトリ名を確認してください
+
+# 1. サービスアカウント作成
+gcloud iam service-accounts create "${SERVICE_ACCOUNT}" \
+  --project "${PROJECT_ID}"
+
+# 2. 権限付与
+# Cloud Run 管理者
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/run.admin"
+
+# サービスアカウントユーザー
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+
+# Artifact Registry 書き込み権限
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+
+# 3. Workload Identity Pool 作成
+gcloud iam workload-identity-pools create "${POOL_NAME}" \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --display-name="GitHub Actions Pool"
+
+# 4. Provider 作成
+gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --workload-identity-pool="${POOL_NAME}" \
+  --display-name="GitHub Actions Provider" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
+  --issuer-uri="https://token.actions.githubusercontent.com"
+
+# 5. サービスアカウントとPoolの紐付け
+gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --project="${PROJECT_ID}" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')/locations/global/workloadIdentityPools/${POOL_NAME}/attribute.repository/${REPO}"
+
+# 6. 設定値の確認 (Secretsに登録する値)
+echo "GCP_WORKLOAD_IDENTITY_PROVIDER=$(gcloud iam workload-identity-pools providers describe ${PROVIDER_NAME} --project=${PROJECT_ID} --location=global --workload-identity-pool=${POOL_NAME} --format='value(name)')"
+echo "GCP_SERVICE_ACCOUNT=${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
+```
+
 ### デプロイ設定
 
 | 設定 | 値 |
