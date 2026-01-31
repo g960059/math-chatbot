@@ -169,6 +169,106 @@ init-env:
     fi
 
 # =============================================================================
+# GitHub Actions セットアップ
+# =============================================================================
+
+# GitHub用リポジトリ設定
+github_owner := "g960059"
+github_repo := "math-chatbot"
+pool_name := "github-pool"
+provider_name := "github-provider"
+sa_name := "github-actions"
+
+# Workload Identity Federation をセットアップ
+setup-wif:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "Setting up Workload Identity Federation for GitHub Actions..."
+
+    # サービスアカウント作成
+    echo "Creating service account..."
+    gcloud iam service-accounts create {{ sa_name }} \
+        --project {{ project }} \
+        --display-name "GitHub Actions" \
+        --description "Service account for GitHub Actions deployments" \
+        2>/dev/null || echo "Service account already exists"
+
+    SA_EMAIL="{{ sa_name }}@{{ project }}.iam.gserviceaccount.com"
+
+    # 必要な権限を付与
+    echo "Granting permissions..."
+    for role in roles/run.admin roles/storage.admin roles/cloudbuild.builds.builder roles/iam.serviceAccountUser roles/artifactregistry.writer; do
+        gcloud projects add-iam-policy-binding {{ project }} \
+            --member="serviceAccount:${SA_EMAIL}" \
+            --role="${role}" \
+            --quiet
+    done
+
+    # Workload Identity Pool 作成
+    echo "Creating Workload Identity Pool..."
+    gcloud iam workload-identity-pools create {{ pool_name }} \
+        --project {{ project }} \
+        --location global \
+        --display-name "GitHub Pool" \
+        2>/dev/null || echo "Pool already exists"
+
+    # Workload Identity Provider 作成
+    echo "Creating Workload Identity Provider..."
+    gcloud iam workload-identity-pools providers create-oidc {{ provider_name }} \
+        --project {{ project }} \
+        --location global \
+        --workload-identity-pool {{ pool_name }} \
+        --display-name "GitHub Provider" \
+        --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
+        --attribute-condition="assertion.repository=='{{ github_owner }}/{{ github_repo }}'" \
+        --issuer-uri="https://token.actions.githubusercontent.com" \
+        2>/dev/null || echo "Provider already exists"
+
+    # サービスアカウントへのバインディング
+    echo "Binding service account..."
+    gcloud iam service-accounts add-iam-policy-binding ${SA_EMAIL} \
+        --project {{ project }} \
+        --role="roles/iam.workloadIdentityUser" \
+        --member="principalSet://iam.googleapis.com/projects/$(gcloud projects describe {{ project }} --format='value(projectNumber)')/locations/global/workloadIdentityPools/{{ pool_name }}/attribute.repository/{{ github_owner }}/{{ github_repo }}"
+
+    # 出力
+    echo ""
+    echo "=========================================="
+    echo "Setup complete!"
+    echo "=========================================="
+    echo ""
+    echo "Add the following secrets to your GitHub repository:"
+    echo ""
+    echo "WIF_PROVIDER:"
+    echo "  projects/$(gcloud projects describe {{ project }} --format='value(projectNumber)')/locations/global/workloadIdentityPools/{{ pool_name }}/providers/{{ provider_name }}"
+    echo ""
+    echo "WIF_SERVICE_ACCOUNT:"
+    echo "  ${SA_EMAIL}"
+    echo ""
+    echo "NEXT_PUBLIC_SUPABASE_URL:"
+    echo "  (your Supabase URL)"
+    echo ""
+    echo "NEXT_PUBLIC_SUPABASE_ANON_KEY:"
+    echo "  (your Supabase anon key)"
+
+# GitHub Secretsに設定する値を表示
+show-wif-config:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    PROJECT_NUMBER=$(gcloud projects describe {{ project }} --format='value(projectNumber)')
+    SA_EMAIL="{{ sa_name }}@{{ project }}.iam.gserviceaccount.com"
+
+    echo "GitHub Secrets に設定する値:"
+    echo ""
+    echo "WIF_PROVIDER:"
+    echo "  projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/{{ pool_name }}/providers/{{ provider_name }}"
+    echo ""
+    echo "WIF_SERVICE_ACCOUNT:"
+    echo "  ${SA_EMAIL}"
+
+# =============================================================================
 # ユーティリティ
 # =============================================================================
 

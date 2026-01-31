@@ -158,11 +158,35 @@ API側でもモックユーザーを使用。
 
 ## Cloud Runデプロイ
 
-### 手動デプロイ
+### justコマンドでデプロイ
 
 ```bash
-# Cloud Buildでビルド＆デプロイ
-gcloud builds submit --config cloudbuild.yaml --project math-chatbot-484411
+# ローカルからデプロイ（.envから環境変数を読み込み）
+just deploy
+```
+
+### GitHub Actions（自動デプロイ）
+
+`main`ブランチへのpushで自動デプロイが実行されます。
+
+#### 初回セットアップ
+
+1. Workload Identity Federationをセットアップ：
+```bash
+just setup-wif
+```
+
+2. 表示されたシークレットをGitHubリポジトリに設定：
+   - Settings → Secrets and variables → Actions → New repository secret
+   - 以下の4つを追加：
+     - `WIF_PROVIDER`: Workload Identity Providerのパス
+     - `WIF_SERVICE_ACCOUNT`: サービスアカウントのメール
+     - `NEXT_PUBLIC_SUPABASE_URL`: SupabaseのURL
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabaseの公開キー
+
+3. シークレット値の確認：
+```bash
+just show-wif-config
 ```
 
 ### デプロイ設定
@@ -177,7 +201,7 @@ gcloud builds submit --config cloudbuild.yaml --project math-chatbot-484411
 ### 重要: ビルド時環境変数
 
 `NEXT_PUBLIC_*` 変数はビルド時にインライン化されるため、
-`cloudbuild.yaml` で `--build-arg` を使ってDockerビルドに渡す必要がある。
+デプロイ時に `--set-build-env-vars` で渡す必要がある。
 
 ---
 
