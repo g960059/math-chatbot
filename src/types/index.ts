@@ -40,6 +40,10 @@ export interface Message {
   created_at: string
 }
 
+export interface SearchResult extends Conversation {
+  snippet: string | null
+}
+
 export interface OpenRouterModel {
   id: string
   name: string
