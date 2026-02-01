@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { E2E_MOCK_CONVERSATIONS } from '../route'
-import { E2E_MOCK_MESSAGES } from '../[id]/messages/route'
+import { E2E_MOCK_CONVERSATIONS, E2E_MOCK_MESSAGES } from '@/lib/e2e-mocks'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)

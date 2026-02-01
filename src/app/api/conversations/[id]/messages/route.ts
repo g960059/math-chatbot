@@ -2,9 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { DEFAULT_MODEL, DEFAULT_MODEL_OPTIONS } from '@/types'
 import type { ModelOptions } from '@/types'
-
-// E2E test mock data
-export const E2E_MOCK_MESSAGES: Record<string, Array<{ id: string; conversation_id: string; role: string; content: string; created_at: string }>> = {}
+import { E2E_MOCK_MESSAGES } from '@/lib/e2e-mocks'
 
 export async function GET(
   _request: Request,
