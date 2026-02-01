@@ -43,7 +43,8 @@ jobs:
             --project ${{ env.PROJECT_ID }} \
             --region ${{ env.REGION }} \
             --config cloudbuild.yaml \
-            --substitutions=_IMAGE=$IMAGE,_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }},_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            --substitutions=_IMAGE=$IMAGE,_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }},_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+            --suppress-logs
 
           gcloud run deploy ${{ env.SERVICE }} \
             --project ${{ env.PROJECT_ID }} \
