@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, MessageSquare, Settings, Trash2, Menu, X, LogOut } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, MessageSquare, Settings, Trash2, Menu, X, LogOut, Search } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
-import type { Conversation } from '@/types'
+import type { Conversation, SearchResult } from '@/types'
 
 interface SidebarProps {
   conversations: Conversation[]
@@ -15,6 +15,8 @@ interface SidebarProps {
   onLogout: () => void
   isMobileOpen: boolean
   onMobileClose: () => void
+  searchResults: SearchResult[] | null
+  onSearch: (query: string) => void
 }
 
 export function Sidebar({
@@ -27,8 +29,25 @@ export function Sidebar({
   onLogout,
   isMobileOpen,
   onMobileClose,
+  searchResults,
+  onSearch,
 }: SidebarProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onSearch(searchQuery)
+    }, 300)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [searchQuery, onSearch])
+
+  const displayedConversations: (Conversation & { snippet?: string | null })[] =
+    searchResults !== null ? searchResults : conversations
 
   const handleDelete = (id: string) => {
     if (deleteConfirm === id) {
@@ -81,15 +100,37 @@ export function Sidebar({
           </button>
         </div>
 
+        {/* Search input */}
+        <div className="px-2 pb-2">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border border-[var(--border-color)]">
+            <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="検索..."
+              className="flex-1 min-w-0 text-sm bg-transparent outline-none placeholder-gray-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Conversation list */}
         <div className="flex-1 overflow-y-auto p-2">
-          {conversations.length === 0 ? (
+          {displayedConversations.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
-              会話がありません
+              {searchQuery ? '検索結果がありません' : '会話がありません'}
             </p>
           ) : (
             <ul className="space-y-1">
-              {conversations.map((conversation) => (
+              {displayedConversations.map((conversation) => (
                 <li key={conversation.id}>
                   <div
                     role="button"
@@ -113,6 +154,11 @@ export function Sidebar({
                       <p className="font-medium truncate">
                         {conversation.title || '新しい会話'}
                       </p>
+                      {conversation.snippet && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          {conversation.snippet}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {formatDate(conversation.updated_at)}
                       </p>

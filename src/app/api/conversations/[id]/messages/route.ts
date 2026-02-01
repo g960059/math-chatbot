@@ -4,7 +4,7 @@ import { DEFAULT_MODEL, DEFAULT_MODEL_OPTIONS } from '@/types'
 import type { ModelOptions } from '@/types'
 
 // E2E test mock data
-const E2E_MOCK_MESSAGES: Record<string, Array<{ id: string; conversation_id: string; role: string; content: string; created_at: string }>> = {}
+export const E2E_MOCK_MESSAGES: Record<string, Array<{ id: string; conversation_id: string; role: string; content: string; created_at: string }>> = {}
 
 export async function GET(
   _request: Request,

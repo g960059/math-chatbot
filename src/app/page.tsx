@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Sidebar, MobileMenuButton, ChatArea, SettingsModal } from '@/components'
 import { createClient } from '@/lib/supabase/client'
-import type { Conversation, Message, UserSettings } from '@/types'
+import type { Conversation, Message, UserSettings, SearchResult } from '@/types'
 
 export default function HomePage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -14,6 +14,20 @@ export default function HomePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settings, setSettings] = useState<UserSettings | null>(null)
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null)
+
+  // Search conversations
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults(null)
+      return
+    }
+    const response = await fetch(`/api/conversations/search?query=${encodeURIComponent(query)}`)
+    if (response.ok) {
+      const data = await response.json()
+      setSearchResults(data)
+    }
+  }, [])
 
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
@@ -228,6 +242,8 @@ export default function HomePage() {
         onLogout={handleLogout}
         isMobileOpen={isMobileMenuOpen}
         onMobileClose={() => setIsMobileMenuOpen(false)}
+        searchResults={searchResults}
+        onSearch={handleSearch}
       />
 
       <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">

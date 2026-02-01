@@ -121,6 +121,59 @@ CREATE POLICY "Users can delete messages in own conversations"
     )
   );
 
+-- Full-text search function for conversations
+-- Searches both conversation titles and message contents
+-- Returns matching conversations with a snippet from the matching message
+CREATE OR REPLACE FUNCTION search_conversations(query TEXT)
+RETURNS TABLE (
+  id UUID,
+  user_id UUID,
+  title TEXT,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  snippet TEXT
+) AS $$
+DECLARE
+  search_pattern TEXT;
+  current_user_id UUID;
+BEGIN
+  current_user_id := auth.uid();
+  search_pattern := '%' || query || '%';
+
+  -- Search conversations matching by title OR by message content
+  RETURN QUERY
+  SELECT DISTINCT
+    c.id,
+    c.user_id,
+    c.title,
+    c.created_at,
+    c.updated_at,
+    -- Snippet: first matching message content truncated, or empty if match was on title only
+    (
+      SELECT CASE
+        WHEN LENGTH(m.content) <= 120 THEN m.content
+        ELSE SUBSTRING(m.content FROM 1 FOR 120) || '…'
+      END
+      FROM messages m
+      WHERE m.conversation_id = c.id
+        AND m.content ILIKE search_pattern
+      ORDER BY m.created_at ASC
+      LIMIT 1
+    ) AS snippet
+  FROM conversations c
+  WHERE c.user_id = current_user_id
+    AND (
+      c.title ILIKE search_pattern
+      OR EXISTS (
+        SELECT 1 FROM messages m
+        WHERE m.conversation_id = c.id
+          AND m.content ILIKE search_pattern
+      )
+    )
+  ORDER BY c.updated_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Migration: Add new columns if they don't exist (for existing databases)
 DO $$
 BEGIN
