@@ -37,14 +37,42 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          set -euo pipefail
+
           IMAGE="asia-northeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE }}:${{ github.sha }}"
 
-          gcloud builds submit \
+          BUILD_ID=$(gcloud builds submit \
             --project ${{ env.PROJECT_ID }} \
             --region ${{ env.REGION }} \
             --config cloudbuild.yaml \
             --substitutions=_IMAGE=$IMAGE,_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }},_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
-            --suppress-logs
+            --suppress-logs \
+            --async \
+            --format="value(id)")
+
+          echo "Cloud Build started: ${BUILD_ID}"
+
+          STATUS=""
+          for _ in {1..60}; do
+            STATUS=$(gcloud builds describe "${BUILD_ID}" \
+              --project ${{ env.PROJECT_ID }} \
+              --region ${{ env.REGION }} \
+              --format="value(status)")
+
+            if [[ "${STATUS}" == "SUCCESS" ]]; then
+              break
+            fi
+            if [[ "${STATUS}" == "FAILURE" || "${STATUS}" == "CANCELLED" ]]; then
+              echo "Cloud Build failed: ${STATUS}"
+              exit 1
+            fi
+            sleep 10
+          done
+
+          if [[ "${STATUS}" != "SUCCESS" ]]; then
+            echo "Cloud Build timed out. Last status: ${STATUS}"
+            exit 1
+          fi
 
           gcloud run deploy ${{ env.SERVICE }} \
             --project ${{ env.PROJECT_ID }} \
