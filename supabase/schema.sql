@@ -124,7 +124,7 @@ CREATE POLICY "Users can delete messages in own conversations"
 -- Full-text search function for conversations
 -- Searches both conversation titles and message contents
 -- Returns matching conversations with a snippet from the matching message
-CREATE OR REPLACE FUNCTION search_conversations(query TEXT, p_user_id UUID)
+CREATE OR REPLACE FUNCTION search_conversations(query TEXT)
 RETURNS TABLE (
   id UUID,
   user_id UUID,
@@ -135,7 +135,9 @@ RETURNS TABLE (
 ) AS $$
 DECLARE
   search_pattern TEXT;
+  current_user_id UUID;
 BEGIN
+  current_user_id := auth.uid();
   search_pattern := '%' || query || '%';
 
   -- Search conversations matching by title OR by message content
@@ -159,7 +161,7 @@ BEGIN
       LIMIT 1
     ) AS snippet
   FROM conversations c
-  WHERE c.user_id = p_user_id
+  WHERE c.user_id = current_user_id
     AND (
       c.title ILIKE search_pattern
       OR EXISTS (

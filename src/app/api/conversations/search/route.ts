@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { E2E_MOCK_CONVERSATIONS } from '../route'
+import { E2E_MOCK_MESSAGES } from '../[id]/messages/route'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -11,7 +13,22 @@ export async function GET(request: Request) {
 
   // E2E test mode
   if (process.env.E2E_TEST_MODE === 'true') {
-    return NextResponse.json([])
+    const pattern = query.trim().toLowerCase()
+    const results = E2E_MOCK_CONVERSATIONS
+      .filter((conv) => {
+        if (conv.title.toLowerCase().includes(pattern)) return true
+        const messages = E2E_MOCK_MESSAGES[conv.id] || []
+        return messages.some((m) => m.content.toLowerCase().includes(pattern))
+      })
+      .map((conv) => {
+        const messages = E2E_MOCK_MESSAGES[conv.id] || []
+        const matchingMessage = messages.find((m) => m.content.toLowerCase().includes(pattern))
+        const snippet = matchingMessage
+          ? (matchingMessage.content.length <= 120 ? matchingMessage.content : matchingMessage.content.slice(0, 120) + '…')
+          : null
+        return { ...conv, snippet }
+      })
+    return NextResponse.json(results)
   }
 
   const supabase = await createClient()
@@ -26,7 +43,6 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase.rpc('search_conversations', {
     query: query.trim(),
-    p_user_id: user.id,
   })
 
   if (error) {
