@@ -72,18 +72,27 @@ deploy:
         exit 1
     fi
 
+    echo "Building image with Cloud Build..."
+
+    IMAGE="asia-northeast1-docker.pkg.dev/{{ project }}/cloud-run-source-deploy/{{ service }}:local"
+
+    gcloud builds submit \
+        --project {{ project }} \
+        --region {{ region }} \
+        --config cloudbuild.yaml \
+        --substitutions=_IMAGE="${IMAGE}",_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}",_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
+
     echo "Deploying to Cloud Run..."
 
     gcloud run deploy {{ service }} \
         --project {{ project }} \
         --region {{ region }} \
-        --source . \
+        --image "${IMAGE}" \
         --platform managed \
         --allow-unauthenticated \
         --port 3000 \
         --min-instances 0 \
         --max-instances 10 \
-        --set-build-env-vars "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL},NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
         --set-env-vars "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL},NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
 
 # cloudbuild.yamlを使ったデプロイ（カスタムビルド設定がある場合）
