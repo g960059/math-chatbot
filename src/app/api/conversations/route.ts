@@ -1,11 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-
-// E2E test mock data
-const E2E_TEST_USER_ID = 'e2e-test-user-id'
-export const E2E_MOCK_CONVERSATIONS = [
-  { id: 'e2e-conv-1', user_id: E2E_TEST_USER_ID, title: 'テスト会話1', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-]
+import { E2E_TEST_USER_ID, E2E_MOCK_CONVERSATIONS } from '@/lib/e2e-mocks'
 
 export async function GET() {
   // E2E test mode
