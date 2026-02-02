@@ -199,7 +199,7 @@ export function ChatArea({
       </div>
 
       {/* Input */}
-      <div className="border-t border-[var(--border-color)] p-4">
+      <div className="flex-shrink-0 border-t border-[var(--border-color)] p-4 pb-[env(safe-area-inset-bottom,16px)]">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
           <div className="flex gap-2 items-end">
             <div className="flex-1 relative">
